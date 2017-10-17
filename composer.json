@@ -1,0 +1,33 @@
+{
+    "name": "datto/parameter-auto-env",
+    "description": "Composer plugin to add support for \"env-map\": \"auto\"",
+    "type": "composer-plugin",
+    "keywords": ["parameters management", "env", "env-map", "auto-env"],
+    "homepage": "http://datto.com",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Stephen Hawkes",
+            "email": "shawkes@datto.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.3",
+        "composer-plugin-api": "^1.1",
+        "symfony/yaml": "~2.3|~3.0",
+        "incenteev/composer-parameter-handler": "~1.0|~2.0"
+    },
+    "require-dev": {
+        "composer/composer": "1.0.*@dev",
+        "squizlabs/php_codesniffer": ">=1.5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Datto\\Composer\\ParameterAutoEnv\\": "src"
+        }
+    },
+    "extra": {
+        "class": "Datto\\Composer\\ParameterAutoEnv\\AutoEnvPlugin"
+    }
+}
