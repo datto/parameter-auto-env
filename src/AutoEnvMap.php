@@ -42,13 +42,8 @@ class AutoEnvMap
 
         foreach ($expectedParams as $param => $default) {
             $fullParam = ($file->getAutoEnvFullname() ? $parameterKey . '.' : '') . $param;
-            $envName = $this->paramToEnvName($fullParam, $file->getAutoEnvPrefix());
 
-            if (getenv($envName) !== false) {
-                $this->envMap[$param] = $envName;
-            } else {
-                $this->missingParameters[$param] = $envName;
-            }
+            $this->consumeParameter($fullParam, $default, $file->getAutoEnvPrefix());
         }
     }
 
@@ -99,5 +94,25 @@ class AutoEnvMap
     private function paramToEnvName($parameterName, $envPrefix = '')
     {
         return $envPrefix . strtoupper(str_replace('.', '__', $parameterName));
+    }
+
+    /**
+     * @param string $param
+     * @param mixed $default
+     * @param string $envPrefix
+     */
+    private function consumeParameter($param, $default, $envPrefix = '')
+    {
+        $envName = $this->paramToEnvName($param, $envPrefix);
+
+        if (getenv($envName) !== false) {
+            $this->envMap[$param] = $envName;
+        } elseif (is_array($default)) {
+            foreach ($default as $subParam => $subDefault) {
+                $this->consumeParameter($param . '.' . $subParam, $subDefault, $envPrefix);
+            }
+        } else {
+            $this->missingParameters[$param] = $envName;
+        }
     }
 }
