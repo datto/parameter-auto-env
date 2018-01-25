@@ -25,6 +25,27 @@ With the plugin installed you can now use the new configuration options inside o
 }
 ```
 
+### Usage with run-script:
+`"env-map": "auto"` will automatically apply to any Composer install or update events that include a call to
+`Incenteev/ParameterHandler`. However, to work during other events or manual script execution you must explicitly add
+the call to buildMap in your scripts object before the buildParameters call. e.g.
+```
+"scripts": {
+    "update-parameters": [
+        "Datto\\Composer\\ParameterAutoEnv\\AutoEnvPlugin::buildMap",
+        "Incenteev\\ParameterHandler\\ScriptHandler::buildParameters"
+    ],
+    "post-install-cmd": [
+        "@update-parameters"
+    ],
+    "post-update-cmd": [
+        "@update-parameters"
+    ]
+}
+```
+
+Execution will now function correctly when running `composer run-script update-parameters`
+
 
 ## Environment variable names
 
