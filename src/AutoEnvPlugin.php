@@ -20,14 +20,21 @@ class AutoEnvPlugin implements PluginInterface, EventSubscriberInterface, Capabl
     const EVENT_PRIORITY = 1;
 
     /**
+     * @var string Callback for the standard Incenteev\ParameterHandler script
+     */
+    const INCENTEEV_SCRIPT = 'Incenteev\\ParameterHandler\\ScriptHandler::buildParameters';
+
+    /**
+     * @var array Events to subscribe to in Composer, populated by self::activate()
+     */
+    private static $subscribeEvents = array();
+
+    /**
      * @inheritDoc
      */
     public static function getSubscribedEvents()
     {
-        return array(
-            'post-install-cmd' => array('processIncenteevParameters', self::EVENT_PRIORITY),
-            'post-update-cmd' => array('processIncenteevParameters', self::EVENT_PRIORITY),
-        );
+        return self::$subscribeEvents;
     }
 
     /**
@@ -35,6 +42,16 @@ class AutoEnvPlugin implements PluginInterface, EventSubscriberInterface, Capabl
      */
     public function activate(Composer $composer, IOInterface $io)
     {
+        $scripts = $composer->getPackage()->getScripts();
+
+        self::$subscribeEvents = array();
+
+        $possibleEvents = array('post-install-cmd', 'post-update-cmd');
+        foreach ($possibleEvents as $event) {
+            if ($this->isBuildParameterEvent($event, $scripts)) {
+                self::$subscribeEvents[$event] = array('processIncenteevParameters', self::EVENT_PRIORITY);
+            }
+        }
     }
 
     /**
@@ -83,5 +100,28 @@ class AutoEnvPlugin implements PluginInterface, EventSubscriberInterface, Capabl
         } catch (IncenteevArgumentException $e) {
             // Ignore any Incenteev config problems as Incenteev\ParameterHandler will alert on them
         }
+    }
+
+    /**
+     * Check if Incenteev script is called during a given Composer event
+     *
+     * @param string $event
+     * @param array $scripts
+     */
+    private function isBuildParameterEvent($event, array $scripts)
+    {
+        if (!isset($scripts[$event])) {
+            return false;
+        }
+
+        foreach ($scripts[$event] as $script) {
+            if ($script === self::INCENTEEV_SCRIPT) {
+                return true;
+            } elseif (substr($script, 0, 1) === '@' && $this->isBuildParameterEvent(substr($script, 1), $scripts)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
