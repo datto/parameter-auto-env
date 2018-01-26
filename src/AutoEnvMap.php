@@ -43,7 +43,11 @@ class AutoEnvMap
         foreach ($expectedParams as $param => $default) {
             $fullParam = ($file->getAutoEnvFullname() ? $parameterKey . '.' : '') . $param;
 
-            $this->consumeParameter($fullParam, $default, $file->getAutoEnvPrefix());
+            $envName = $this->consumeParameter($fullParam, $default, $file->getAutoEnvPrefix());
+
+            if ($envName !== '') {
+                $this->envMap[$param] = $envName;
+            }
         }
     }
 
@@ -105,14 +109,43 @@ class AutoEnvMap
     {
         $envName = $this->paramToEnvName($param, $envPrefix);
 
+        // ENV is set for this parameter
         if (getenv($envName) !== false) {
-            $this->envMap[$param] = $envName;
-        } elseif (is_array($default)) {
-            foreach ($default as $subParam => $subDefault) {
-                $this->consumeParameter($param . '.' . $subParam, $subDefault, $envPrefix);
-            }
-        } else {
-            $this->missingParameters[$param] = $envName;
+            return $envName;
         }
+
+        // The ENV for this parameter is missing or incomplete
+        if (!is_array($default)) {
+            $this->missingParameters[$param] = $envName;
+
+            return '';
+        }
+
+        // Flatten nested parameters for ParameterHandler
+        $canBuild = true;
+        $build = array();
+
+        foreach ($default as $subParam => $subDefault) {
+            $subEnvName = $this->consumeParameter($param . '.' . $subParam, $subDefault, $envPrefix);
+
+            // If any sub-parameters are missing we can't build, but continue in order to log all of them
+            if ($subEnvName === '') {
+                $canBuild = false;
+            }
+
+            $build[] = $subParam . ': ' . getenv($subEnvName);
+        }
+
+        if ($canBuild) {
+            // Build yaml object (all env values should be valid yaml)
+            $envValue = '{' . implode(', ', $build) . '}';
+
+            putenv($envName . '=' . $envValue);
+
+            return $envName;
+        }
+
+        // Return without alerting that the top-object as missing
+        return '';
     }
 }
