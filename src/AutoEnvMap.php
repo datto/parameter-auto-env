@@ -114,27 +114,29 @@ class AutoEnvMap
             return $envName;
         }
 
-        // Support nested parameters and flatten for ParameterHandler
-        if (is_array($default)) {
-            $canBuild = true;
-            $build = array();
+        // The ENV for this parameter is missing or incomplete
+        if (!is_array($default)) {
+            $this->missingParameters[$param] = $envName;
 
-            foreach ($default as $subParam => $subDefault) {
-                $subEnvName = $this->consumeParameter($param . '.' . $subParam, $subDefault, $envPrefix);
+            return '';
+        }
 
-                // If any sub-parameters are missing we can't build, but continue in order to log all of them
-                if ($subEnvName === '') {
-                    $canBuild = false;
-                }
+        // Flatten nested parameters for ParameterHandler
+        $canBuild = true;
+        $build = array();
 
-                $build[] = $subParam . ': ' . getenv($subEnvName);
+        foreach ($default as $subParam => $subDefault) {
+            $subEnvName = $this->consumeParameter($param . '.' . $subParam, $subDefault, $envPrefix);
+
+            // If any sub-parameters are missing we can't build, but continue in order to log all of them
+            if ($subEnvName === '') {
+                $canBuild = false;
             }
 
-            if (!$canBuild) {
-                // Return without alerting that the top-object as missing
-                return '';
-            }
+            $build[] = $subParam . ': ' . getenv($subEnvName);
+        }
 
+        if ($canBuild) {
             // Build yaml object (all env values should be valid yaml)
             $envValue = '{' . implode(', ', $build) . '}';
 
@@ -143,9 +145,7 @@ class AutoEnvMap
             return $envName;
         }
 
-        // If we've got this far then the ENV for this parameter is missing / incomplete
-        $this->missingParameters[$param] = $envName;
-
+        // Return without alerting that the top-object as missing
         return '';
     }
 }
